@@ -1,0 +1,45 @@
+<!-- Progressive Guided Workflow Stepper Header -->
+<div class="stepper-wrapper mb-4 shadow-sm">
+    <div class="stepper-item {% if current_step > 1 %}completed{% elif current_step == 1 %}active{% endif %}">
+        <a href="{{ url_for('upload_page') }}" class="stepper-link">
+            <div class="step-counter">
+                {% if current_step > 1 %}<i class="bi bi-check-lg"></i>{% else %}1{% endif %}
+            </div>
+            <div class="step-name">1. Ingest & OCR</div>
+        </a>
+    </div>
+
+    <div class="stepper-item {% if current_step > 2 %}completed{% elif current_step == 2 %}active{% endif %}">
+        <a href="{{ url_for('client_page', client_id=active_client_id) if active_client_id else '#' }}" class="stepper-link {% if not active_client_id %}disabled{% endif %}">
+            <div class="step-counter">
+                {% if current_step > 2 %}<i class="bi bi-check-lg"></i>{% else %}2{% endif %}
+            </div>
+            <div class="step-name">2. Risk Profile & IPS</div>
+        </a>
+    </div>
+
+    <div class="stepper-item {% if current_step > 3 %}completed{% elif current_step == 3 %}active{% endif %}">
+        <a href="{{ url_for('portfolio_page', client_id=active_client_id) if active_client_id else '#' }}" class="stepper-link {% if not active_client_id %}disabled{% endif %}">
+            <div class="step-counter">
+                {% if current_step > 3 %}<i class="bi bi-check-lg"></i>{% else %}3{% endif %}
+            </div>
+            <div class="step-name">3. Holdings Diagnostics</div>
+        </a>
+    </div>
+
+    <div class="stepper-item {% if current_step > 4 %}completed{% elif current_step == 4 %}active{% endif %}">
+        <a href="{{ url_for('proposal_page', client_id=active_client_id) if active_client_id else '#' }}" class="stepper-link {% if not active_client_id %}disabled{% endif %}">
+            <div class="step-counter">
+                {% if current_step > 4 %}<i class="bi bi-check-lg"></i>{% else %}4{% endif %}
+            </div>
+            <div class="step-name">4. Rebalance & FINRA</div>
+        </a>
+    </div>
+
+    <div class="stepper-item {% if current_step == 5 %}active{% endif %}">
+        <a href="{{ url_for('audit_page', client_id=active_client_id) if active_client_id else '#' }}" class="stepper-link {% if not active_client_id %}disabled{% endif %}">
+            <div class="step-counter">5</div>
+            <div class="step-name">5. SEC Audit & Sign-off</div>
+        </a>
+    </div>
+</div>

@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% block title %}Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <h2 class="mb-4">📈 Analysis & Backtesting: {{ profile.name }}</h2>
+
+    <!-- Stress Test Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">⚡ Historical Market-Shock Stress Test</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Crisis Scenario</th>
+                            <th>Current Drawdown</th>
+                            <th>Rebalanced Drawdown</th>
+                            <th>Protection</th>
+                            <th>Capital Preserved</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scenario, data in stress_results.items() %}
+                        <tr>
+                            <td>{{ scenario }}</td>
+                            <td>{{ '{:,.2f}'.format(data.current_portfolio_drawdown * 100) }}%</td>
+                            <td>{{ '{:,.2f}'.format(data.target_portfolio_drawdown * 100) }}%</td>
+                            <td>{{ '{:,.2f}'.format(data.risk_reduction_percentage * 100) }}%</td>
+                            <td>₹{{ '{:,.2f}'.format(data.dollar_preservation) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backtest Results Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">📈 2020–2024 Backtest: Governed vs Unmanaged</h5>
+        </div>
+        <div class="card-body">
+            <!-- KPI Row -->
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="card bg-light h-100">
+                        <div class="card-body text-center p-2">
+                            <small class="text-muted d-block">Governed Final AUM</small>
+                            <strong>₹{{ '{:,.2f}'.format(backtest.summary.final_governed_value) }}</strong>
+                            <br><small class="text-success">+{{ '{:,.2f}'.format(backtest.summary.total_governed_return * 100) }}%</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card bg-light h-100">
+                        <div class="card-body text-center p-2">
+                            <small class="text-muted d-block">Drifting Final AUM</small>
+                            <strong>₹{{ '{:,.2f}'.format(backtest.summary.final_drifting_value) }}</strong>
+                            <br><small class="text-secondary">+{{ '{:,.2f}'.format(backtest.summary.total_drifting_return * 100) }}%</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card bg-light h-100">
+                        <div class="card-body text-center p-2">
+                            <small class="text-muted d-block">Max Drawdown Governed</small>
+                            <strong>{{ '{:,.2f}'.format(backtest.summary.max_drawdown_governed * 100) }}%</strong>
+                            <br><small class="text-success">+{{ '{:,.2f}'.format(backtest.summary.drawdown_protection_gain * 100) }}% prot.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card bg-light h-100">
+                        <div class="card-body text-center p-2">
+                            <small class="text-muted d-block">Sharpe Ratio</small>
+                            <strong>{{ '{:,.2f}'.format(backtest.summary.sharpe_ratio_governed) }}</strong> (Gov)
+                            <br><small class="text-secondary">{{ '{:,.2f}'.format(backtest.summary.sharpe_ratio_drifting) }} (Drift)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card bg-light h-100">
+                        <div class="card-body text-center p-2">
+                            <small class="text-muted d-block">Tax Drag</small>
+                            <strong>₹{{ '{:,.2f}'.format(backtest.summary.cumulative_tax_drag) }}</strong>
+                            <br><small class="text-secondary">{{ backtest.summary.total_rebalances_executed }} rebalances</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 1: Value -->
+            <div id="backtest-chart" style="height:380px" class="mb-4"></div>
+
+            <!-- Two-column Charts -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div id="tracking-error-chart" style="height:300px"></div>
+                </div>
+                <div class="col-md-6">
+                    <div id="equity-drift-chart" style="height:300px"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const backtestData = {{ backtest_json|safe }};
+        
+        const dates = backtestData.map(r => r.date);
+
+        // Chart 1: Value
+        const traceGovVal = {
+            x: dates,
+            y: backtestData.map(r => r.governed_portfolio_value),
+            name: 'Governed Portfolio',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#1E88E5', width: 3 }
+        };
+        const traceDriftVal = {
+            x: dates,
+            y: backtestData.map(r => r.drifting_benchmark_value),
+            name: 'Drifting Benchmark',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#9E9E9E', width: 2, dash: 'dash' }
+        };
+        const layoutVal = {
+            margin: { t: 20, r: 20, l: 60, b: 50 },
+            yaxis: { tickprefix: '₹', title: 'Portfolio Value (INR)' },
+            legend: { orientation: 'h', yanchor: 'bottom', y: -0.2, xanchor: 'center', x: 0.5 }
+        };
+        Plotly.newPlot('backtest-chart', [traceGovVal, traceDriftVal], layoutVal);
+
+        // Chart 2: Tracking Error
+        const traceGovTE = {
+            x: dates,
+            y: backtestData.map(r => r.governed_tracking_error),
+            name: 'Governed',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#4CAF50' }
+        };
+        const traceDriftTE = {
+            x: dates,
+            y: backtestData.map(r => r.drifting_tracking_error),
+            name: 'Drifting',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#F44336', dash: 'dot' }
+        };
+        const layoutTE = {
+            title: { text: 'Tracking Error', font: { size: 14 } },
+            margin: { t: 30, r: 20, l: 50, b: 50 },
+            yaxis: { ticksuffix: '%' },
+            legend: { orientation: 'h', yanchor: 'bottom', y: -0.3, xanchor: 'center', x: 0.5 }
+        };
+        Plotly.newPlot('tracking-error-chart', [traceGovTE, traceDriftTE], layoutTE);
+
+        // Chart 3: Equity Drift
+        const traceGovEq = {
+            x: dates,
+            y: backtestData.map(r => r.governed_equity_weight * 100),
+            name: 'Governed Equity %',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#1E88E5' }
+        };
+        const traceDriftEq = {
+            x: dates,
+            y: backtestData.map(r => r.drifting_equity_weight * 100),
+            name: 'Drifting Equity %',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#9E9E9E' }
+        };
+        const traceCeiling = {
+            x: [dates[0], dates[dates.length - 1]],
+            y: [60, 60],
+            name: 'Fiduciary Ceiling (60%)',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#F44336', dash: 'dash' }
+        };
+        const layoutEq = {
+            title: { text: 'Equity Weight Drift', font: { size: 14 } },
+            margin: { t: 30, r: 20, l: 50, b: 50 },
+            yaxis: { ticksuffix: '%' },
+            legend: { orientation: 'h', yanchor: 'bottom', y: -0.3, xanchor: 'center', x: 0.5 }
+        };
+        Plotly.newPlot('equity-drift-chart', [traceGovEq, traceDriftEq, traceCeiling], layoutEq);
+    });
+</script>
+{% endblock %}

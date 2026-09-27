@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% set title = 'Client Profile' %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Stepper Header -->
+    {% set current_step = 2 %}
+    {% include "stepper.html" %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>👤 Step 2: Fiduciary Risk Profile & IPS: <span class="text-primary">{{ profile.name }}</span></h2>
+            <p class="text-muted mb-0">Deterministic 1–10 Risk Scoring & Regulatory Boundary Evaluation</p>
+        </div>
+        <span class="badge bg-secondary fs-6 px-3 py-2">{{ profile.client_id }}</span>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- KYC Demographics -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">KYC Demographics</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Age</dt>
+                        <dd class="col-sm-7">{{ profile.kyc.age }}</dd>
+                        
+                        <dt class="col-sm-5">Annual Income</dt>
+                        <dd class="col-sm-7">₹{{ '{:,.2f}'.format(profile.kyc.annual_income) }}</dd>
+                        
+                        <dt class="col-sm-5">Net Worth</dt>
+                        <dd class="col-sm-7">₹{{ '{:,.2f}'.format(profile.kyc.net_worth) }}</dd>
+                        
+                        <dt class="col-sm-5">Investment Experience</dt>
+                        <dd class="col-sm-7">{{ profile.kyc.investment_experience|replace('_', ' ')|title }}</dd>
+                        
+                        <dt class="col-sm-5">Employment Status</dt>
+                        <dd class="col-sm-7">{{ profile.kyc.employment_status|replace('_', ' ')|title }}</dd>
+                        
+                        <dt class="col-sm-5">Dependents</dt>
+                        <dd class="col-sm-7">{{ profile.kyc.dependents }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investment Policy Statement (IPS) -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Investment Policy Statement (IPS)</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Investment Objective</dt>
+                        <dd class="col-sm-7">{{ profile.ips.investment_objective|replace('_', ' ')|title }}</dd>
+                        
+                        <dt class="col-sm-5">Risk Tolerance</dt>
+                        <dd class="col-sm-7">{{ profile.ips.risk_tolerance|replace('_', ' ')|title }}</dd>
+                        
+                        <dt class="col-sm-5">Time Horizon</dt>
+                        <dd class="col-sm-7">{{ profile.ips.time_horizon_years }} years</dd>
+                        
+                        <dt class="col-sm-5">Liquidity Needs</dt>
+                        <dd class="col-sm-7">{{ profile.ips.liquidity_needs|replace('_', ' ')|title }}</dd>
+                        
+                        <dt class="col-sm-5">Tax Bracket</dt>
+                        <dd class="col-sm-7">{{ '{:.1f}'.format(profile.ips.tax_bracket * 100) }}%</dd>
+                        
+                        <dt class="col-sm-5">Max Single Position</dt>
+                        <dd class="col-sm-7">{{ '{:.1f}'.format(profile.ips.max_single_position_pct * 100) }}%</dd>
+                        
+                        <dt class="col-sm-5">Rebalance Threshold</dt>
+                        <dd class="col-sm-7">{{ '{:.1f}'.format(profile.ips.rebalance_threshold_pct * 100) }}%</dd>
+                        
+                        <dt class="col-sm-5">Restrictions</dt>
+                        <dd class="col-sm-7">
+                            {% for restriction in profile.ips.restrictions %}
+                                <span class="badge bg-warning text-dark">{{ restriction }}</span>
+                            {% endfor %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fiduciary Risk Assessment -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">⚖️ Fiduciary Risk Assessment</h5>
+        </div>
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <h1 class="display-1 fw-bold">{{ profile.risk_score }}</h1>
+                <span class="badge bg-dark fs-5">{{ profile.risk_category|replace('_', ' ')|title }}</span>
+            </div>
+
+            {% set score_class = 'bg-success' %}
+            {% set score_style = '' %}
+            {% if profile.risk_score <= 3 %}
+                {% set score_class = 'bg-success' %}
+            {% elif profile.risk_score <= 6 %}
+                {% set score_class = 'bg-warning' %}
+            {% elif profile.risk_score == 7 %}
+                {% set score_class = '' %}
+                {% set score_style = 'background-color: #fd7e14;' %}
+            {% else %}
+                {% set score_class = 'bg-danger' %}
+            {% endif %}
+
+            <div class="progress mb-4" style="height: 30px;">
+                <div class="progress-bar {{ score_class }}" role="progressbar" style="width: {{ profile.risk_score * 10 }}%; {{ score_style }}" aria-valuenow="{{ profile.risk_score }}" aria-valuemin="1" aria-valuemax="10"></div>
+            </div>
+
+            <div class="row text-center mb-4 g-3">
+                <div class="col-md-6">
+                    <div class="border rounded p-3 bg-light">
+                        <h6 class="text-muted mb-2">Mandatory Equity Ceiling</h6>
+                        <h4 class="mb-0 text-dark">
+                            {% if profile.risk_score <= 3 %}
+                                &le;20%
+                            {% elif profile.risk_score == 4 %}
+                                &le;35%
+                            {% elif profile.risk_score <= 6 %}
+                                &le;55%
+                            {% elif profile.risk_score == 7 %}
+                                &le;70%
+                            {% else %}
+                                &le;90%
+                            {% endif %}
+                        </h4>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="border rounded p-3 bg-light">
+                        <h6 class="text-muted mb-2">Mandatory Cash Buffer</h6>
+                        <h4 class="mb-0 text-dark">
+                            {% if profile.ips.liquidity_needs|lower == 'high' %}
+                                &ge;15%
+                            {% elif profile.ips.liquidity_needs|lower == 'moderate' %}
+                                &ge;7%
+                            {% else %}
+                                &ge;2%
+                            {% endif %}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-outline-secondary w-100 mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#scoringExplanation" aria-expanded="false" aria-controls="scoringExplanation">
+                View Scoring Explanation
+            </button>
+            <div class="collapse" id="scoringExplanation">
+                <div class="card card-body bg-light">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ scoring_explanation }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step Navigation Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-5 p-3 bg-light rounded-3">
+        <a href="/upload" class="btn btn-outline-secondary btn-lg">
+            &larr; Step 1: Ingestion & OCR
+        </a>
+        <div class="d-flex gap-2">
+            <form action="/run_advisory/{{ profile.client_id }}" method="POST" class="m-0">
+                <button type="submit" class="btn btn-outline-primary btn-lg">⚡ Re-run Optimizer</button>
+            </form>
+            <a href="/portfolio/{{ profile.client_id }}" class="btn btn-primary btn-lg fw-bold px-4">
+                Proceed to Step 3: Holdings Diagnostics &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

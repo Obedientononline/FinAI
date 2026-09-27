@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% set title = 'Portfolio' %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Stepper Header -->
+    {% set current_step = 3 %}
+    {% include "stepper.html" %}
+
+    <div class="mb-4">
+        <h2>📊 Step 3: Portfolio Holdings Diagnostics: <span class="text-primary">{{ profile.name }}</span></h2>
+        <p class="text-muted mb-0">Current Asset Allocation, Position Weights, and Tax-Loss Harvesting Scanner (INR)</p>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+        {% set total_pnl = portfolio.positions | sum(attribute='unrealized_gain_loss') %}
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total AUM</h6>
+                    <h4 class="card-title mb-0">₹{{ '{:,.2f}'.format(portfolio.total_value) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Unrealized P&L</h6>
+                    <h4 class="card-title mb-0 {% if total_pnl > 0 %}text-success{% elif total_pnl < 0 %}text-danger{% endif %}">
+                        ₹{{ '{:,.2f}'.format(total_pnl) }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Positions</h6>
+                    <h4 class="card-title mb-0">{{ portfolio.positions|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Asset Classes</h6>
+                    {% set asset_classes = portfolio.allocation.values() | select(">", 0) | list %}
+                    <h4 class="card-title mb-0">{{ asset_classes|length }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Table -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="card-title mb-0">Allocation</h5>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center p-0">
+                    <div id="allocation-chart" class="w-100"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="card-title mb-0">Holdings</h5>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Class</th>
+                                <th>Shares</th>
+                                <th>Cost Basis</th>
+                                <th>Price</th>
+                                <th>Market Value</th>
+                                <th>Weight</th>
+                                <th>Gain/Loss</th>
+                                <th>Holding Days</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pos in portfolio.positions %}
+                            <tr>
+                                <td><strong>{{ pos.symbol }}</strong></td>
+                                <td>{{ pos.asset_class|replace('_', ' ')|title }}</td>
+                                <td>{{ '{:,.2f}'.format(pos.shares) }}</td>
+                                <td>₹{{ '{:,.2f}'.format(pos.cost_basis_per_share) }}</td>
+                                <td>₹{{ '{:,.2f}'.format(pos.current_price) }}</td>
+                                <td>₹{{ '{:,.2f}'.format(pos.market_value) }}</td>
+                                <td>{{ '{:.1f}'.format(pos.weight * 100) }}%</td>
+                                <td class="{% if pos.unrealized_gain_loss > 0 %}text-success{% elif pos.unrealized_gain_loss < 0 %}text-danger{% endif %} fw-bold">
+                                    ₹{{ '{:,.2f}'.format(pos.unrealized_gain_loss) }}
+                                </td>
+                                <td>{{ pos.holding_period_days }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TLH Opportunities -->
+    {% if tlh_opportunities %}
+    <div class="card shadow-sm mb-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">💡 Tax-Loss Harvesting Opportunities</h5>
+        </div>
+        <div class="card-body">
+            {% for opt in tlh_opportunities %}
+            <div class="alert alert-info mb-2">
+                <strong>{{ opt.symbol }}</strong> has an unrealized loss of <strong>₹{{ '{:,.2f}'.format(opt.unrealized_loss) }}</strong> held for {{ opt.days_since_purchase }} days. Replacement: <strong>{{ opt.replacement_symbol }}</strong>.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Step Navigation Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-5 p-3 bg-light rounded-3">
+        <a href="/client/{{ profile.client_id }}" class="btn btn-outline-secondary btn-lg">
+            &larr; Step 2: Risk Profile & IPS
+        </a>
+        <div class="d-flex gap-2">
+            <form action="/run_advisory/{{ profile.client_id }}" method="POST" class="m-0">
+                <button type="submit" class="btn btn-outline-primary btn-lg">⚡ Re-run Optimizer</button>
+            </form>
+            <a href="/proposal/{{ profile.client_id }}" class="btn btn-primary btn-lg fw-bold px-4">
+                Proceed to Step 4: Rebalance & FINRA &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    var allocationData = {{ allocation_json|safe }};
+    var labels = Object.keys(allocationData);
+    var values = Object.values(allocationData);
+    
+    var allocData = [{ 
+        values: values, 
+        labels: labels, 
+        type: 'pie', 
+        hole: 0.45, 
+        marker: { 
+            colors: ['#1E88E5', '#43A047', '#FB8C00', '#7E57C2', '#8E24AA', '#E53935', '#00ACC1'] 
+        } 
+    }];
+    
+    var layout = {
+        margin: {l:10, r:10, t:30, b:10}, 
+        height: 320, 
+        showlegend: true, 
+        legend: {orientation: 'h', y: -0.1}
+    };
+    
+    Plotly.newPlot('allocation-chart', allocData, layout, {responsive: true});
+</script>
+{% endblock %}

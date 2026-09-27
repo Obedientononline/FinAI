@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}Audit Ledger{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Stepper Header -->
+    {% set current_step = 5 %}
+    {% include "stepper.html" %}
+
+    <div class="row mb-4">
+        <div class="col">
+            <h2>🛡️ Step 5: SEC Rule 17a-4 / FINRA 4511 Audit Ledger: <span class="text-primary">{{ profile.name }}</span></h2>
+            <p class="text-muted">Immutable Lyzr AIMS Cryptographic Hash Chain & Fiduciary Decision Records</p>
+        </div>
+    </div>
+
+    <!-- Verification Status card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">Cryptographic Verification</h5>
+                <div>
+                    {% if integrity.verified and not integrity.tampered %}
+                        <span class="badge bg-success">VERIFIED</span>
+                    {% else %}
+                        <span class="badge bg-danger">COMPROMISED</span>
+                    {% endif %}
+                    <a href="{{ request.path }}" class="btn btn-sm btn-outline-secondary ms-2">🔄 Refresh</a>
+                </div>
+            </div>
+            
+            {% if integrity.verified and not integrity.tampered %}
+                <div class="alert alert-success mb-0" role="alert">
+                    <h5 class="alert-heading">🛡️ Hash Chain: VERIFIED INTACT</h5>
+                    <p class="mb-0">Chain Hash: <code>{{ ledger.hash_chain }}</code></p>
+                    <hr>
+                    <p class="mb-0 small">All {{ ledger.entries|length }} entries cryptographically verified.</p>
+                </div>
+            {% elif integrity.tampered %}
+                <div class="alert alert-danger mb-0" role="alert">
+                    <h5 class="alert-heading">🚨 TAMPERING DETECTED!</h5>
+                    <dl class="row mb-0 mt-3">
+                        <dt class="col-sm-3">Compromised Node</dt>
+                        <dd class="col-sm-9">{{ integrity.compromised_node }}</dd>
+                        <dt class="col-sm-3">Details</dt>
+                        <dd class="col-sm-9">{{ integrity.details }}</dd>
+                        <dt class="col-sm-3">Stored Hash</dt>
+                        <dd class="col-sm-9"><code>{{ integrity.stored_hash }}</code></dd>
+                        <dt class="col-sm-3">Recalculated Hash</dt>
+                        <dd class="col-sm-9"><code>{{ integrity.recalculated_hash }}</code></dd>
+                    </dl>
+                </div>
+            {% else %}
+                <div class="alert alert-info mb-0" role="alert">
+                    <p class="mb-0">Chain Hash: <code>{{ ledger.hash_chain }}</code></p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Event Trace Table -->
+    <div class="card mb-4">
+        <div class="card-header">Chronological Multi-Agent Execution Trace</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Event ID</th>
+                            <th>Time</th>
+                            <th>Phase</th>
+                            <th>Agent</th>
+                            <th>Status</th>
+                            <th>Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in ledger.entries %}
+                        <tr>
+                            <td><code>{{ entry.event_id }}</code></td>
+                            <td>{{ entry.timestamp.strftime('%H:%M:%S') }}</td>
+                            <td>{{ entry.event_type }}</td>
+                            <td>{{ entry.agent_name }}</td>
+                            <td>
+                                {% if entry.compliance_status == 'PASS' %}
+                                    <span class="badge badge-pass">🟢 PASS</span>
+                                {% elif entry.compliance_status == 'FAIL' %}
+                                    <span class="badge badge-fail">🔴 FAIL</span>
+                                {% elif entry.compliance_status == 'WARN' %}
+                                    <span class="badge badge-warn">🟡 WARN</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ entry.compliance_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ entry.output_summary }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reasoning Chain Inspector -->
+    <div class="card mb-4">
+        <div class="card-header">Multi-Agent Reasoning Chain</div>
+        <div class="card-body">
+            <div class="accordion" id="reasoningAccordion">
+                {% for entry in ledger.entries %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-{{ loop.index }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false" aria-controls="collapse-{{ loop.index }}">
+                            [{{ entry.event_type }}] {{ entry.agent_name }} — {{ entry.event_id }}
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ loop.index }}" data-bs-parent="#reasoningAccordion">
+                        <div class="accordion-body">
+                            <h6>Input Context</h6>
+                            <p>{{ entry.input_summary }}</p>
+                            
+                            <h6>Output Decision</h6>
+                            <p>{{ entry.output_summary }}</p>
+
+                            <h6>Reasoning Chain</h6>
+                            <pre class="bg-light p-3 rounded"><code>{{ entry.reasoning_chain }}</code></pre>
+                            
+                            {% if entry.metadata %}
+                            <h6>Metadata</h6>
+                            <pre class="bg-light p-3 rounded"><code>{{ entry.metadata | tojson(indent=2) }}</code></pre>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tamper Demo Section -->
+    <div class="card border-warning mb-4">
+        <div class="card-header bg-warning text-dark">🧪 Tamper Detection Demo</div>
+        <div class="card-body">
+            <p>
+                The ledger uses a SHA-256 hash chain to ensure cryptographic immutability. 
+                Any modification to an existing entry will invalidate the hash chain for all subsequent blocks.
+            </p>
+            {% if ledger.entries %}
+            <p>Target Event ID: <code>{{ ledger.entries[0].event_id }}</code></p>
+            <form action="/tamper/{{ profile.client_id }}" method="POST">
+                <button type="submit" class="btn btn-warning">Deliberately Tamper with Record</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Export & Step Navigation Section -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <a href="/proposal/{{ profile.client_id }}" class="btn btn-outline-secondary btn-lg">
+                &larr; Step 4: Rebalance & FINRA
+            </a>
+            <div class="d-flex gap-2">
+                <a href="/export_audit/{{ profile.client_id }}" class="btn btn-outline-primary btn-lg">
+                    📦 Export SEC Compliance JSON
+                </a>
+                <a href="{{ url_for('upload_page') }}" class="btn btn-success btn-lg fw-bold px-4">
+                    <i class="bi bi-file-earmark-plus me-1"></i>Ingest Next Client (OCR) &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

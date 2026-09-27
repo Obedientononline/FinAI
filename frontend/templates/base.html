@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Safe Wealth Advisory{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    {% block extra_css %}{% endblock %}
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .navbar-custom {
+            background-color: #0D47A1;
+        }
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: #ffffff;
+        }
+        .navbar-custom .nav-link:hover,
+        .navbar-custom .nav-link:focus {
+            color: rgba(255, 255, 255, 0.75);
+        }
+        .navbar-custom .nav-link.active {
+            color: #ffffff;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">🏛️ Safe Wealth Advisory</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="/">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page in ['client', 'client_profile'] %}active{% endif %}" href="{{ url_for('client_page', client_id=active_client_id) if active_client_id else '#' }}">Client Profile</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page == 'portfolio' %}active{% endif %}" href="{{ url_for('portfolio_page', client_id=active_client_id) if active_client_id else '#' }}">Portfolio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page in ['proposal', 'trade_proposal'] %}active{% endif %}" href="{{ url_for('proposal_page', client_id=active_client_id) if active_client_id else '#' }}">Trade Proposal</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page == 'analysis' %}active{% endif %}" href="{{ url_for('analysis_page', client_id=active_client_id) if active_client_id else '#' }}">Analysis</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page in ['audit', 'audit_ledger'] %}active{% endif %}" href="{{ url_for('audit_page', client_id=active_client_id) if active_client_id else '#' }}">Audit Ledger</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page == 'upload' %}active{% endif %} text-warning fw-semibold" href="{{ url_for('upload_page') }}"><i class="bi bi-file-earmark-arrow-up me-1"></i>Ingest & Assess Risk</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-light text-primary border me-2 fw-semibold px-2 py-1"><i class="bi bi-currency-rupee"></i> INR</span>
+                    <a href="/clear_clients" class="btn btn-outline-light btn-sm me-2" title="Reset and start fresh with a new client document">
+                        <i class="bi bi-arrow-repeat me-1"></i>Start Fresh
+                    </a>
+                    <div class="dropdown me-3">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="clientDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            {% if active_client_name %}{{ active_client_name }}{% else %}No Client Loaded{% endif %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="clientDropdown">
+                            {% if clients %}
+                                <li class="dropdown-header text-uppercase small">Active Clients</li>
+                                {% for client in clients %}
+                                    <li><a class="dropdown-item {% if client.client_id == active_client_id %}active{% endif %}" href="/client/{{ client.client_id }}">{{ client.name }}</a></li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                            {% else %}
+                                <li><span class="dropdown-item text-muted">No client records yet</span></li>
+                                <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li><a class="dropdown-item text-success fw-semibold" href="/upload"><i class="bi bi-file-earmark-plus me-1"></i>Ingest New Client (OCR)</a></li>
+                            <li><a class="dropdown-item text-primary" href="/seed_demo_clients"><i class="bi bi-database-add me-1"></i>Load 8 FINRA Test Archetypes</a></li>
+                            <li><a class="dropdown-item text-danger" href="/clear_clients"><i class="bi bi-trash3 me-1"></i>Wipe All Client Data</a></li>
+                        </ul>
+                    </div>
+                    <span class="badge bg-success">🔒 Lyzr Safe AI Active</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <main class="container-fluid py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="text-center py-4 text-muted mt-5">
+        <small>Safe Wealth Advisory — Powered by Lyzr Agent API, Safe AI & AIMS | Built for RIA Fiduciary Compliance</small>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Scripts -->
+    <script src="/static/js/charts.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

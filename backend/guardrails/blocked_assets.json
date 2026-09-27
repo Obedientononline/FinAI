@@ -1,0 +1,9 @@
+{
+  "meme_coins": ["DOGE", "SHIB", "PEPE", "BONK", "FLOKI", "WIF", "BRETT"],
+  "penny_stocks": ["stocks_under_5_dollars"],
+  "speculative_options": ["0DTE", "meme_stock_options", "weekly_otm_options"],
+  "high_risk_crypto": ["leverage_tokens", "defi_yield_farms", "algorithmic_stablecoins"],
+  "sanctioned": ["OFAC_SDN_list"],
+  "tobacco_securities": ["MO", "PM", "BTI", "VRGDF", "TPB"],
+  "firearms_securities": ["SWBI", "RGR", "VSTO", "POWW", "OLN"]
+}

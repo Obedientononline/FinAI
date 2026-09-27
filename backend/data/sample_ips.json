@@ -1,0 +1,13 @@
+{
+  "investment_objective": "growth",
+  "risk_tolerance": "moderate",
+  "time_horizon_years": 15,
+  "liquidity_needs": "low",
+  "tax_bracket": 0.32,
+  "restrictions": [
+    "no_tobacco",
+    "no_firearms"
+  ],
+  "max_single_position_pct": 0.10,
+  "rebalance_threshold_pct": 0.05
+}

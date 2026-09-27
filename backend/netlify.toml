@@ -1,0 +1,34 @@
+[build]
+  command = "python build_netlify.py"
+  publish = "public"
+  functions = "netlify/functions"
+
+[build.environment]
+  PYTHON_VERSION = "3.10"
+
+[functions]
+  included_files = [
+    "templates/**",
+    "static/**",
+    "data/**",
+    "models/**",
+    "services/**",
+    "engine/**",
+    "guardrails/**",
+    "database/**",
+    "agents/**",
+    "config.py",
+    "app.py"
+  ]
+
+# Direct Netlify CDN routing for static assets
+[[redirects]]
+  from = "/static/*"
+  to = "/static/:splat"
+  status = 200
+
+# Direct all other paths to the Flask serverless function
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/app"
+  status = 200

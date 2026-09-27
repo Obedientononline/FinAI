@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% block title %}Trade Proposal{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Stepper Header -->
+    {% set current_step = 4 %}
+    {% include "stepper.html" %}
+
+    <div class="mb-4">
+        <h2>⚡ Step 4: CVXPY Rebalancing & FINRA Suitability: <span class="text-primary">{{ profile.name }}</span></h2>
+        <p class="text-muted mb-0">Deterministic Quadratic Programming Trade Orders & 12-Rule Reg BI Compliance Gate</p>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            {% if proposal.suitability_report.all_passed %}
+            <div class="alert alert-success fs-5 shadow-sm">
+                ✅ <strong>APPROVED</strong> — All 12 FINRA suitability checks passed. Proposal ID: <code>{{ proposal.proposal_id }}</code>
+            </div>
+            {% else %}
+            <div class="alert alert-danger fs-5 shadow-sm">
+                🚫 <strong>BLOCKED</strong> — {{ proposal.suitability_report.critical_failures|length }} critical violation(s) detected. Execution inhibited.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Buy Orders (INR)</h6>
+                    <h4 class="mb-0">₹{{ '{:,.2f}'.format(proposal.total_buy_value) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Sell Orders (INR)</h6>
+                    <h4 class="mb-0">₹{{ '{:,.2f}'.format(proposal.total_sell_value) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Net Est. Tax Drag (INR)</h6>
+                    <h4 class="mb-0">₹{{ '{:,.2f}'.format(proposal.net_tax_impact) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Turnover</h6>
+                    <h4 class="mb-0">{{ '{:,.2f}'.format(((proposal.total_buy_value + proposal.total_sell_value) / portfolio.total_value) * 100) }}%</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Allocation Shift Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">🔄 Allocation Shift</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div id="allocation-bar-chart"></div>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Asset Class</th>
+                                <th>Current</th>
+                                <th>Target</th>
+                                <th>Shift</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asset_class, current_val in proposal.current_allocation.items() %}
+                            <tr>
+                                <td>{{ asset_class|title }}</td>
+                                <td>{{ '{:,.2f}'.format(current_val * 100) }}%</td>
+                                <td>{{ '{:,.2f}'.format(proposal.target_allocation[asset_class] * 100) }}%</td>
+                                <td>{{ '{:,.2f}'.format((proposal.target_allocation[asset_class] - current_val) * 100) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="alert alert-info mt-3">
+                        <strong>Rationale:</strong> {{ proposal.allocation_rationale }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade Orders Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">🛒 Trade Orders (CVXPY Optimized)</h5>
+        </div>
+        <div class="card-body">
+            {% if not proposal.trades %}
+            <p class="mb-0">No adjustments needed.</p>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Symbol</th>
+                            <th>Class</th>
+                            <th>Shares</th>
+                            <th>Price</th>
+                            <th>Value</th>
+                            <th>Tax Impact</th>
+                            <th>Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trade in proposal.trades %}
+                        <tr>
+                            <td>{% if trade.action == 'BUY' %}🟢 BUY{% else %}🔴 SELL{% endif %}</td>
+                            <td>{{ trade.symbol }}</td>
+                            <td>{{ trade.asset_class }}</td>
+                            <td>{{ trade.shares }}</td>
+                            <td>₹{{ '{:,.2f}'.format(trade.estimated_price) }}</td>
+                            <td>₹{{ '{:,.2f}'.format(trade.estimated_value) }}</td>
+                            <td>{% if trade.action == 'SELL' %}₹{{ '{:,.2f}'.format(trade.tax_impact) }}{% else %}₹0.00{% endif %}</td>
+                            <td>{{ trade.rationale }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- FINRA Suitability Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">🛡️ FINRA Suitability — 12-Rule Compliance Gate</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% set half = (proposal.suitability_report.checks|length / 2)|round(0, 'ceil')|int %}
+                <div class="col-md-6">
+                    {% for check in proposal.suitability_report.checks[:half] %}
+                        {% set alert_class = 'alert-success' %}
+                        {% set icon = '✅' %}
+                        {% if not check.passed %}
+                            {% if check.severity == 'critical' %}
+                                {% set alert_class = 'alert-danger' %}
+                                {% set icon = '🚫' %}
+                            {% else %}
+                                {% set alert_class = 'alert-warning' %}
+                                {% set icon = '⚠️' %}
+                            {% endif %}
+                        {% endif %}
+                        <div class="alert {{ alert_class }} py-2 mb-2">
+                            {{ icon }} [{{ check.rule_id }}] {{ check.rule_name }} ({{ check.severity|upper }})<br>
+                            <small>{{ check.details }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    {% for check in proposal.suitability_report.checks[half:] %}
+                        {% set alert_class = 'alert-success' %}
+                        {% set icon = '✅' %}
+                        {% if not check.passed %}
+                            {% if check.severity == 'critical' %}
+                                {% set alert_class = 'alert-danger' %}
+                                {% set icon = '🚫' %}
+                            {% else %}
+                                {% set alert_class = 'alert-warning' %}
+                                {% set icon = '⚠️' %}
+                            {% endif %}
+                        {% endif %}
+                        <div class="alert {{ alert_class }} py-2 mb-2">
+                            {{ icon }} [{{ check.rule_id }}] {{ check.rule_name }} ({{ check.severity|upper }})<br>
+                            <small>{{ check.details }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stress Test Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">⚡ Market Shock Stress Test</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Crisis Scenario</th>
+                            <th>Current Drawdown</th>
+                            <th>Rebalanced Drawdown</th>
+                            <th>Protection</th>
+                            <th>Capital Preserved</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scenario, data in stress_results.items() %}
+                        <tr>
+                            <td>{{ scenario }}</td>
+                            <td>{{ '{:,.2f}'.format(data.current_portfolio_drawdown * 100) }}%</td>
+                            <td>{{ '{:,.2f}'.format(data.target_portfolio_drawdown * 100) }}%</td>
+                            <td>{{ '{:,.2f}'.format(data.risk_reduction_percentage * 100) }}%</td>
+                            <td>₹{{ '{:,.2f}'.format(data.dollar_preservation) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advisor Actions -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <form id="approve-form" action="/approve/{{ profile.client_id }}" method="POST">
+                        <div class="input-group">
+                            <span class="input-group-text">Advisor Notes</span>
+                            <input type="text" name="advisor_notes" class="form-control" value="Trade proposal reviewed and aligned with client IPS.">
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" form="approve-form" class="btn w-100 {% if proposal.suitability_report.all_passed %}btn-success fw-bold{% else %}btn-secondary disabled{% endif %}">
+                        🚀 Approve & Execute
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <a href="/download_pdf/{{ profile.client_id }}" class="btn btn-outline-primary w-100">📥 Download PDF (INR)</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step Navigation Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-5 p-3 bg-light rounded-3">
+        <a href="/portfolio/{{ profile.client_id }}" class="btn btn-outline-secondary btn-lg">
+            &larr; Step 3: Holdings Diagnostics
+        </a>
+        <a href="/audit/{{ profile.client_id }}" class="btn btn-dark btn-lg fw-bold px-4">
+            Proceed to Step 5: SEC Audit Ledger &rarr;
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const allocationData = {{ allocation_json|safe }};
+        
+        const labels = Object.keys(allocationData.current).map(key => key.charAt(0).toUpperCase() + key.slice(1));
+        const currentVals = Object.values(allocationData.current).map(val => val * 100);
+        const targetVals = Object.values(allocationData.target).map(val => val * 100);
+
+        const currentTrace = {
+            x: labels,
+            y: currentVals,
+            name: 'Current',
+            type: 'bar',
+            marker: { color: '#90CAF9' }
+        };
+
+        const targetTrace = {
+            x: labels,
+            y: targetVals,
+            name: 'Target',
+            type: 'bar',
+            marker: { color: '#1E88E5' }
+        };
+
+        const layout = {
+            barmode: 'group',
+            margin: { t: 20, r: 20, l: 50, b: 50 },
+            yaxis: {
+                title: 'Allocation (%)',
+                ticksuffix: '%'
+            },
+            legend: {
+                orientation: 'h',
+                yanchor: 'bottom',
+                y: -0.2,
+                xanchor: 'center',
+                x: 0.5
+            }
+        };
+
+        Plotly.newPlot('allocation-bar-chart', [currentTrace, targetTrace], layout);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Advisory Dashboard{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Stepper Header -->
+    {% set current_step = 1 if not active_profile else 1 %}
+    {% include "stepper.html" %}
+
+    {% if not clients or not active_profile %}
+    <!-- Zero State Hero: Direct Prompt for Ingestion -->
+    <div class="card shadow-sm border-0 mb-4 text-center p-5 bg-white">
+        <div class="py-3" style="max-width: 760px; margin: 0 auto;">
+            <div class="mb-3">
+                <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill fs-6">
+                    <i class="bi bi-shield-check me-1"></i>Fiduciary Wealth Advisory & Portfolio Rebalancer
+                </span>
+            </div>
+            <h1 class="display-6 fw-bold mb-3 text-dark">Client Profiling & Fiduciary Engine</h1>
+            <p class="text-muted fs-5 mb-4">
+                Start by uploading a client's financial dossier (PDF, Scanned Image, Word, or Excel). 
+                The system will automatically extract the <strong>13 KYC & IPS parameters</strong>, compute their 
+                deterministic risk tier ($1\text{–}10$), and generate an auditable, FINRA-governed rebalancing proposal.
+            </p>
+
+            <div class="d-flex justify-content-center gap-3 mb-4">
+                <a href="{{ url_for('upload_page') }}" class="btn btn-primary btn-lg px-4 fw-bold shadow-sm">
+                    <i class="bi bi-file-earmark-arrow-up me-2"></i>Ingest Client Document (Step 1)
+                </a>
+                <a href="/seed_demo_clients" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="bi bi-database-check me-2"></i>Load Demo Archetypes
+                </a>
+            </div>
+
+            <div class="row g-3 text-start pt-3 border-top">
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 h-100">
+                        <i class="bi bi-cpu text-primary fs-3 mb-2 d-block"></i>
+                        <h6 class="fw-bold mb-1">1. Smart Ingestion & OCR</h6>
+                        <small class="text-muted">Parses age, income, net worth in ₹, risk tolerance, and ESG restrictions.</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 h-100">
+                        <i class="bi bi-sliders text-success fs-3 mb-2 d-block"></i>
+                        <h6 class="fw-bold mb-1">2. CVXPY QP Math</h6>
+                        <small class="text-muted">Optimizes asset allocation and minimizes turnover and capital gains tax drag.</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 h-100">
+                        <i class="bi bi-shield-lock text-warning fs-3 mb-2 d-block"></i>
+                        <h6 class="fw-bold mb-1">3. 12 FINRA Reg BI Rules</h6>
+                        <small class="text-muted">Deterministic compliance gates prevent unsuitable trades before advisor sign-off.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Active Client Loaded View -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>📊 Advisory Overview: <span class="text-primary">{{ active_profile.name }}</span></h2>
+            <p class="text-muted mb-0">Active Account ID: <code>{{ active_profile.client_id }}</code> | Denomination: Indian Rupees (₹)</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('upload_page') }}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-plus me-1"></i>Ingest Another Client
+            </a>
+            <a href="/client/{{ active_profile.client_id }}" class="btn btn-primary fw-bold">
+                Continue to Step 2: Risk Profile &rarr;
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <i class="bi bi-shield-check display-5 text-primary mb-2"></i>
+                <h6 class="text-muted mb-1 text-uppercase small">Risk Score</h6>
+                <h3 class="fw-bold mb-0 text-dark">{{ active_profile.risk_score }} / 10</h3>
+                <small class="text-primary fw-semibold">{{ active_profile.risk_category|replace('_', ' ')|title }}</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <i class="bi bi-currency-rupee display-5 text-success mb-2"></i>
+                <h6 class="text-muted mb-1 text-uppercase small">Total AUM</h6>
+                <h3 class="fw-bold mb-0 text-dark">
+                    {% if active_portfolio %}
+                        ₹{{ '{:,.2f}'.format(active_portfolio.total_value) }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </h3>
+                <small class="text-muted">Liquid Investable Assets</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <i class="bi bi-check-circle display-5 text-warning mb-2"></i>
+                <h6 class="text-muted mb-1 text-uppercase small">Suitability Status</h6>
+                <h3 class="fw-bold mb-0">
+                    {% if active_proposal and active_proposal.suitability_report %}
+                        {% if active_proposal.suitability_report.all_passed %}
+                            <span class="text-success">ALL PASSED</span>
+                        {% else %}
+                            <span class="text-danger">{{ active_proposal.suitability_report.critical_failures|length }} Block(s)</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">N/A</span>
+                    {% endif %}
+                </h3>
+                <small class="text-muted">12 FINRA Reg BI Rules</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <i class="bi bi-clock-history display-5 text-info mb-2"></i>
+                <h6 class="text-muted mb-1 text-uppercase small">Time Horizon</h6>
+                <h3 class="fw-bold mb-0 text-dark">{{ active_profile.ips.time_horizon_years }} Years</h3>
+                <small class="text-muted">Liquidity: {{ active_profile.ips.liquidity_needs|title }}</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Navigation Stepper Actions -->
+    <div class="card shadow-sm border-0 mb-4 p-4 bg-white">
+        <h5 class="fw-bold mb-3"><i class="bi bi-diagram-3 text-primary me-2"></i>Guided 5-Step Advisory Progress</h5>
+        <div class="row g-3">
+            <div class="col-md">
+                <a href="{{ url_for('upload_page') }}" class="btn btn-outline-secondary w-100 py-3 text-start">
+                    <span class="badge bg-secondary mb-1">Step 1</span>
+                    <strong class="d-block text-dark">Document Ingest (OCR)</strong>
+                    <small class="text-muted">13 Parameters Extracted</small>
+                </a>
+            </div>
+            <div class="col-md">
+                <a href="{{ url_for('client_page', client_id=active_client_id) }}" class="btn btn-outline-primary w-100 py-3 text-start">
+                    <span class="badge bg-primary mb-1">Step 2</span>
+                    <strong class="d-block text-dark">Risk Profile & IPS</strong>
+                    <small class="text-muted">Score: {{ active_profile.risk_score }}/10</small>
+                </a>
+            </div>
+            <div class="col-md">
+                <a href="{{ url_for('portfolio_page', client_id=active_client_id) }}" class="btn btn-outline-success w-100 py-3 text-start">
+                    <span class="badge bg-success mb-1">Step 3</span>
+                    <strong class="d-block text-dark">Holdings Diagnostics</strong>
+                    <small class="text-muted">AUM: ₹{{ '{:,.0f}'.format(active_portfolio.total_value) if active_portfolio else '0' }}</small>
+                </a>
+            </div>
+            <div class="col-md">
+                <a href="{{ url_for('proposal_page', client_id=active_client_id) }}" class="btn btn-outline-warning w-100 py-3 text-start">
+                    <span class="badge bg-warning text-dark mb-1">Step 4</span>
+                    <strong class="d-block text-dark">Rebalance & FINRA</strong>
+                    <small class="text-muted">CVXPY Trades + 12 Gates</small>
+                </a>
+            </div>
+            <div class="col-md">
+                <a href="{{ url_for('audit_page', client_id=active_client_id) }}" class="btn btn-outline-dark w-100 py-3 text-start">
+                    <span class="badge bg-dark mb-1">Step 5</span>
+                    <strong class="d-block text-dark">Audit Ledger & PDF</strong>
+                    <small class="text-muted">Lyzr AIMS SHA-256</small>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Accounts Relational Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-people text-secondary me-2"></i>All Onboarded Accounts ({{ clients|length }})</h5>
+            <a href="/clear_clients" class="btn btn-sm btn-outline-danger" onclick="return confirm('Clear all client data and start fresh?');">
+                <i class="bi bi-trash3 me-1"></i>Reset All Accounts
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Client ID</th>
+                            <th>Legal Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in clients %}
+                            <tr class="{% if active_client_id and client.client_id|string == active_client_id|string %}table-active{% endif %}">
+                                <td><code>{{ client.client_id }}</code></td>
+                                <td class="fw-semibold">{{ client.name }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/client/{{ client.client_id }}" class="btn btn-outline-primary">Profile (Step 2)</a>
+                                        <a href="/portfolio/{{ client.client_id }}" class="btn btn-outline-success">Holdings (Step 3)</a>
+                                        <a href="/proposal/{{ client.client_id }}" class="btn btn-outline-warning text-dark">Proposal (Step 4)</a>
+                                        <a href="/audit/{{ client.client_id }}" class="btn btn-outline-dark">Audit (Step 5)</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

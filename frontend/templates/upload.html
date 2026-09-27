@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Client Ingestion & Risk Profiling{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Stepper Header -->
+    {% set current_step = 1 %}
+    {% include "stepper.html" %}
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-file-earmark-arrow-up text-primary me-2"></i>Step 1: Client Document Ingestion & OCR Scanner</h2>
+            <p class="text-muted mb-0">Upload any client financial dossier (PDF, Scanned Image, Word, Excel, CSV, or JSON) to automatically extract the 13 required KYC & IPS parameters with Name.</p>
+        </div>
+        <div>
+            <span class="badge bg-primary fs-6 px-3 py-2"><i class="bi bi-currency-rupee"></i> INR Denominated</span>
+        </div>
+    </div>
+
+    <!-- Upload Card & Download Sample Templates -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="card-title mb-0 fw-bold"><i class="bi bi-cloud-upload text-primary me-2"></i>Upload Client Profile Document</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form action="/upload" method="POST" enctype="multipart/form-data">
+                        <div class="upload-dropzone p-4 text-center border rounded-3 bg-light mb-3" style="border: 2px dashed #0D47A1 !important;">
+                            <i class="bi bi-file-earmark-text display-3 text-primary mb-3"></i>
+                            <h5 class="fw-bold">Drag & Drop or Choose Client File</h5>
+                            <p class="text-muted small mb-3">Supported formats: <strong>.pdf, .docx, .xlsx, .xls, .csv, .json, .png, .jpg (Native OCR)</strong></p>
+                            
+                            <input class="form-control form-control-lg mx-auto" style="max-width: 420px;" type="file" name="client_file" id="client_file" required accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.json,.png,.jpg,.jpeg,.bmp,.tiff">
+                        </div>
+
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="auto_run_pipeline" id="auto_run_pipeline" checked>
+                                    <label class="form-check-label small text-muted" for="auto_run_pipeline">
+                                        Automatically execute CVXPY optimizer & FINRA suitability audit on upload
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-5 text-end">
+                                <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">
+                                    <i class="bi bi-lightning-charge me-1"></i>Ingest & Assess Risk
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="card-title mb-0 fw-bold"><i class="bi bi-download text-success me-2"></i>Download Sample Test Templates</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small">Download pre-formatted sample onboarding documents in your preferred format. Fill or modify them and re-upload above:</p>
+                    
+                    <div class="d-grid gap-3">
+                        <a href="/download_sample_template/xlsx" class="btn btn-outline-success text-start py-2">
+                            <i class="bi bi-file-earmark-excel fs-4 me-2 align-middle text-success"></i>
+                            <strong>Sample Client Profile (Excel .xlsx)</strong>
+                            <small class="d-block text-muted ps-4">Tabular key-values + financial numbers in INR</small>
+                        </a>
+
+                        <a href="/download_sample_template/docx" class="btn btn-outline-primary text-start py-2">
+                            <i class="bi bi-file-earmark-word fs-4 me-2 align-middle text-primary"></i>
+                            <strong>Sample Client Profile (Word .docx)</strong>
+                            <small class="d-block text-muted ps-4">Institutional RIA questionnaire table format</small>
+                        </a>
+
+                        <a href="/download_sample_template/pdf" class="btn btn-outline-danger text-start py-2">
+                            <i class="bi bi-file-earmark-pdf fs-4 me-2 align-middle text-danger"></i>
+                            <strong>Sample Client Profile (PDF .pdf)</strong>
+                            <small class="d-block text-muted ps-4">Formatted client questionnaire document</small>
+                        </a>
+
+                        <a href="/download_sample_template/png" class="btn btn-outline-info text-start py-2">
+                            <i class="bi bi-file-earmark-image fs-4 me-2 align-middle text-info"></i>
+                            <strong>Sample Scanned Form (Image .png - OCR)</strong>
+                            <small class="d-block text-muted ps-4">Test document image optical character recognition</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extraction Telemetry (if just uploaded) -->
+    {% if telemetry and ingested_profile %}
+    <div class="card shadow-sm border-0 mb-4 border-start border-success border-4">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-success fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Successfully Ingested: {{ telemetry.file_name }}</h5>
+                <span class="badge bg-success fs-6">Extracted All 13 Parameters + Name</span>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <!-- 13 Extracted Parameters Breakdown -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-person-badge me-2"></i>KYC Areas (Risk Capacity)</h6>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5 text-muted">1. Client Name:</dt>
+                        <dd class="col-sm-7 fw-bold text-dark">{{ ingested_profile.name }}</dd>
+                        
+                        <dt class="col-sm-5 text-muted">2. Client Age:</dt>
+                        <dd class="col-sm-7 fw-bold">{{ ingested_profile.kyc.age }} years</dd>
+                        
+                        <dt class="col-sm-5 text-muted">3. Annual Income:</dt>
+                        <dd class="col-sm-7 fw-bold text-primary">₹{{ '{:,.2f}'.format(ingested_profile.kyc.annual_income) }}</dd>
+                        
+                        <dt class="col-sm-5 text-muted">4. Investable Net Worth:</dt>
+                        <dd class="col-sm-7 fw-bold text-success">₹{{ '{:,.2f}'.format(ingested_profile.kyc.net_worth) }}</dd>
+                        
+                        <dt class="col-sm-5 text-muted">5. Experience:</dt>
+                        <dd class="col-sm-7"><span class="badge bg-secondary">{{ ingested_profile.kyc.investment_experience|title }}</span></dd>
+                        
+                        <dt class="col-sm-5 text-muted">6. Employment:</dt>
+                        <dd class="col-sm-7">{{ ingested_profile.kyc.employment_status|title }}</dd>
+                        
+                        <dt class="col-sm-5 text-muted">7. Dependents:</dt>
+                        <dd class="col-sm-7">{{ ingested_profile.kyc.dependents }}</dd>
+                    </dl>
+                </div>
+
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-success border-bottom pb-2 mb-3"><i class="bi bi-shield-check me-2"></i>IPS Areas (Mandate & Bounds)</h6>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5 text-muted">8. Investment Objective:</dt>
+                        <dd class="col-sm-7 fw-bold">{{ ingested_profile.ips.investment_objective|replace('_', ' ')|title }}</dd>
+                        
+                        <dt class="col-sm-5 text-muted">9. Risk Tolerance:</dt>
+                        <dd class="col-sm-7"><span class="badge bg-info text-dark">{{ ingested_profile.ips.risk_tolerance|replace('_', ' ')|title }}</span></dd>
+                        
+                        <dt class="col-sm-5 text-muted">10. Time Horizon:</dt>
+                        <dd class="col-sm-7 fw-bold">{{ ingested_profile.ips.time_horizon_years }} years</dd>
+                        
+                        <dt class="col-sm-5 text-muted">11. Liquidity Needs:</dt>
+                        <dd class="col-sm-7 fw-bold">{{ ingested_profile.ips.liquidity_needs|title }}</dd>
+                        
+                        <dt class="col-sm-5 text-muted">12. Tax Bracket:</dt>
+                        <dd class="col-sm-7">{{ '{:.1f}'.format(ingested_profile.ips.tax_bracket * 100) }}%</dd>
+                        
+                        <dt class="col-sm-5 text-muted">13. Restrictions / Screen:</dt>
+                        <dd class="col-sm-7">
+                            {% if ingested_profile.ips.restrictions %}
+                                {% for r in ingested_profile.ips.restrictions %}
+                                    <span class="badge bg-warning text-dark">{{ r }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-sm-5 text-muted">Max Position Limit:</dt>
+                        <dd class="col-sm-7">{{ '{:.1f}'.format(ingested_profile.ips.max_single_position_pct * 100) }}%</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Stepper Progression CTA -->
+            <div class="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 fw-bold">Mathematical Fiduciary Score: <span class="badge bg-primary fs-6">{{ ingested_profile.risk_score }}/10</span> ({{ ingested_profile.risk_category|replace('_', ' ')|title }})</h6>
+                    <small class="text-muted">All 13 parameters parsed successfully. Portfolio initialized and rebalancing computed.</small>
+                </div>
+                <a href="/client/{{ ingested_profile.client_id }}" class="btn btn-primary btn-lg fw-bold px-4">
+                    Proceed to Step 2: Risk Profile & IPS &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Required Parameters Specification Guide -->
+    <div class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle text-info me-2"></i>Parameters Required to Assess Individual Risk (KYC & IPS Rubric)</h5>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted">
+                To evaluate client risk capacity, derive target asset allocation, and enforce the 12 FINRA Reg BI fiduciary guardrails, 
+                our deterministic scoring engine parses <strong>13 core parameters</strong> divided into two categories:
+            </p>
+
+            <div class="row g-4">
+                <!-- KYC Column -->
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light h-100">
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-vcard me-2"></i>1. KYC (Know Your Customer) Parameters — Risk Capacity</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered bg-white">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Format / Type</th>
+                                        <th>Example</th>
+                                        <th>Fiduciary Impact</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Client Name</strong></td>
+                                        <td>String</td>
+                                        <td>Aarav Sharma</td>
+                                        <td>Legal entity identifier</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Age</strong></td>
+                                        <td>Integer (18–105)</td>
+                                        <td>42</td>
+                                        <td>Younger clients have higher risk capacity; Age &ge; 70 activates FINRA Senior Safeguard (Cap 40% equity)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Annual Income</strong></td>
+                                        <td>Currency (₹)</td>
+                                        <td>₹35,00,000</td>
+                                        <td>Cashflow cushion; higher income increases ability to withstand short-term market drawdowns</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Investable Net Worth</strong></td>
+                                        <td>Currency (₹)</td>
+                                        <td>₹2,50,00,000</td>
+                                        <td>Calculates income-to-wealth ratio; accounts &gt; ₹41.5L enforce 4-asset-class diversification</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Investment Experience</strong></td>
+                                        <td>Choice</td>
+                                        <td>experienced</td>
+                                        <td>none, limited, experienced, sophisticated — tests client familiarity with volatility</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Employment Status</strong></td>
+                                        <td>String</td>
+                                        <td>Employed / Business</td>
+                                        <td>Stability of primary income stream</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Dependents</strong></td>
+                                        <td>Integer</td>
+                                        <td>2</td>
+                                        <td>Assesses non-discretionary family financial liabilities</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IPS Column -->
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light h-100">
+                        <h6 class="fw-bold text-success mb-3"><i class="bi bi-file-earmark-check me-2"></i>2. IPS (Investment Policy Statement) Parameters — Mandate & Bounds</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered bg-white">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Format / Type</th>
+                                        <th>Example</th>
+                                        <th>Fiduciary Impact</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Investment Objective</strong></td>
+                                        <td>Choice</td>
+                                        <td>growth_and_income</td>
+                                        <td>growth, growth_and_income, income, capital_preservation — guides baseline asset weighting</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Risk Tolerance</strong></td>
+                                        <td>Choice</td>
+                                        <td>moderate</td>
+                                        <td>conservative, moderate_conservative, moderate, moderate_aggressive, aggressive</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Time Horizon</strong></td>
+                                        <td>Years</td>
+                                        <td>15 Years</td>
+                                        <td>Horizon &lt; 3 years legally caps equities &le; 30% to prevent sequence-of-returns risk</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Liquidity Needs</strong></td>
+                                        <td>Choice</td>
+                                        <td>low / moderate / high</td>
+                                        <td>High liquidity strictly mandates &ge; 15% cash reserve buffer (FINRA-003)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tax Bracket</strong></td>
+                                        <td>Percentage</td>
+                                        <td>30% (0.30)</td>
+                                        <td>Drives tax drag optimization & tax-loss harvesting threshold</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>IPS Restrictions</strong></td>
+                                        <td>List of tags</td>
+                                        <td>no_tobacco, no_firearms</td>
+                                        <td>Negative screening exclusions: strictly blocks matching stocks (e.g. MO, PM, RGR, SWBI)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Max Position Limit</strong></td>
+                                        <td>Percentage</td>
+                                        <td>10% (0.10)</td>
+                                        <td>Concentration limit: prevents single stock concentration (FINRA-004)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
