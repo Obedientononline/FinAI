@@ -1,11 +1,14 @@
 # 🏛️ Safe Wealth Advisory & Governed Portfolio Rebalancer
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Netlify-00AD9F?style=for-the-badge&logo=netlify)](https://wealth-advisory-ai.netlify.app/)
 [![Lyzr Agent API](https://img.shields.io/badge/Lyzr-Agent%20API-0052FF?style=flat-square)](https://www.lyzr.ai/)
 [![Lyzr Safe AI](https://img.shields.io/badge/Lyzr-Safe%20AI%20Guardrails-00C853?style=flat-square)](https://www.lyzr.ai/)
 [![Lyzr AIMS](https://img.shields.io/badge/Lyzr-AIMS%20SEC%20Audit-7C4DFF?style=flat-square)](https://www.lyzr.ai/)
 [![FINRA Suitability](https://img.shields.io/badge/FINRA-Rule%202111%20%26%20Reg%20BI-FF6D00?style=flat-square)](https://www.finra.org/)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue?style=flat-square)](https://www.python.org/)
 
+> 🌐 **Live Deployment Portal:** [https://wealth-advisory-ai.netlify.app/](https://wealth-advisory-ai.netlify.app/)
+>
 > **Fiduciary multi-agent wealth assistant that profiles IPS/KYC, rebalances with deterministic quadratic math, enforces FINRA suitability via Lyzr Safe AI, and produces advisor-ready trade proposals with verifiable Lyzr AIMS audit trails.**
 
 ---
@@ -174,8 +177,8 @@ Any modification to an agent's reasoning chain or mathematical outputs alters th
 
 ### 1. Clone & Set Up Environment
 ```bash
-git clone https://github.com/your-org/safe-wealth-advisory.git
-cd safe-wealth-advisory
+git clone https://github.com/Obedientononline/FinAI.git
+cd FinAI
 python -m venv venv
 venv\Scripts\activate   # Windows
 # or source venv/bin/activate # Linux/Mac
